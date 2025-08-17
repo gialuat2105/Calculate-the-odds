@@ -21,22 +21,26 @@ export default function Home() {
 
   const API_KEY = process.env.NEXT_PUBLIC_ODDS_API_KEY; // lấy từ .env
 
-  useEffect(() => {
-    async function fetchOdds() {
-      try {
-        const res = await fetch(
-          `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h,spreads,totals&oddsFormat=decimal&apiKey=${API_KEY}`
-        );
-        const data = await res.json();
-        setOdds(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+  async function fetchOdds() {
+    try {
+      const res = await fetch(
+        `https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=h2h,spreads,totals&oddsFormat=decimal&apiKey=${API_KEY}`
+      );
+      const data = await res.json();
+      setOdds(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  // Fetch lần đầu + auto refresh mỗi 30 giây
+  useEffect(() => {
     fetchOdds();
-  }, [API_KEY]);
+    const interval = setInterval(fetchOdds, 30000); // 30 giây
+    return () => clearInterval(interval);
+  }, []);
 
   // Hàm tính xác suất từ odds
   function impliedProb(odd: number): string {
@@ -49,6 +53,9 @@ export default function Home() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Live Odds & Probabilities</h1>
+      <p className="text-sm text-gray-500 mb-4">
+        (Tự động cập nhật mỗi 30 giây)
+      </p>
       <table className="min-w-full border border-gray-300 text-sm">
         <thead className="bg-gray-100">
           <tr>
@@ -79,7 +86,7 @@ export default function Home() {
               ? impliedProb(totals.outcomes[0].price)
               : "-";
 
-            // giả lập hiệp 1: lấy random hoặc cùng line (nếu API bạn có thêm H1 thì thay bằng dữ liệu thật)
+            // giả lập hiệp 1: nếu API có H1 thì thay bằng dữ liệu thật
             const h1Handicap = spreads?.outcomes[1];
             const h1HandicapProb = spreads?.outcomes[1]
               ? impliedProb(spreads.outcomes[1].price)
